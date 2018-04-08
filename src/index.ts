@@ -21,8 +21,8 @@ if (!IsBrowser) {
     fs = require("fs");
 }
 
-type Variables = { [name: string]: any };
-type Renderer = (locals?: Variables) => string;
+export type Variables = { [name: string]: any };
+export type Renderer = (locals?: Variables) => string;
 
 export interface CompileOption {
     /** For fs.readFile() to decode the file contents. */

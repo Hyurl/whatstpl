@@ -8,7 +8,7 @@ import {
     Node
 } from "whatstpl-toolkit";
 
-interface SourceMap {
+export interface SourceMap {
     [line: string]: {
         column: number;
         node: Node;

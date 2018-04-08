@@ -695,6 +695,7 @@ class Template {
             options = { encoding: options };
         this.options = Object.assign({}, exports.CompileOption, options);
     }
+    /** Renders the given template contents. */
     render(tpl, locals = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             let render = yield this.compile(tpl);
@@ -707,17 +708,22 @@ class Template {
             return render(locals || {});
         });
     }
+    /** Compiles the given template contents. */
     compile(tpl) {
         return __awaiter(this, void 0, void 0, function* () {
+            // If the function is already cached, retrieve it instead.
             if (this.options.cache && Template.cache[this.filename]) {
                 return Template.cache[this.filename];
             }
             let parser = new whatstpl_toolkit_1.Parser(this.filename), node = parser.parse(tpl), _module = yield this.createModule(node);
+            // Wrap the function in a render function, so when it is  called, the 
+            // program can catch and re-throw any errors, and only  return the 
+            // `default` property (HTML) from the module.
             let render = (locals = {}) => {
                 try {
                     return _module.require(this.filename, locals).default;
                 }
-                catch (err) {
+                catch (err) { // replace and re-throw the error.
                     throw module_1.replaceError(err, this.filename);
                 }
             };
@@ -729,6 +735,7 @@ class Template {
     static compileFile(filename, options = null) {
         return __awaiter(this, void 0, void 0, function* () {
             filename = whatstpl_toolkit_1.getAbsPath(filename);
+            // If the function is already cached, retrieve it instead.
             if (options && options.cache && Template.cache[filename]) {
                 return Template.cache[filename];
             }
@@ -736,6 +743,7 @@ class Template {
             return tpl.compile(html);
         });
     }
+    /** Loads the template contents from the file. */
     loadTemplate() {
         if (!whatstpl_toolkit_1.IsBrowser) {
             return new Promise((resolve, reject) => {
@@ -759,6 +767,7 @@ class Template {
             });
         }
     }
+    /** Gets the absolute path of the filename, if it is relative.  */
     getAbsPath(filename) {
         if (!whatstpl_toolkit_1.isAbsPath(filename)) {
             let dir = this.filename && this.filename != "undefined"
@@ -766,19 +775,25 @@ class Template {
                 : whatstpl_toolkit_1.getCwd();
             filename = whatstpl_toolkit_1.normalizePath(dir + whatstpl_toolkit_1.Separator + filename);
         }
+        // If the extension name is omitted, use the one of the parent file.
         if (!whatstpl_toolkit_1.extname(filename)) {
             filename += whatstpl_toolkit_1.extname(this.filename);
         }
         return filename;
     }
+    /** Adds a line of source map to the internal `sourceMap` property.  */
     addSourceMap(column, node) {
         this.currentLine += 1;
         this.module.sourceMap[this.currentLine] = { column, node };
     }
+    /** Pushes a line of code to the internal `code` object. */
     pushCode(before, contents, after, node, lineEnding = true) {
         this.module.code += before + contents + after + (lineEnding ? "\n" : "");
+        // `length` of a string starts from 0, but column number starts from 1,
+        // so here it should add 1. 
         this.addSourceMap(before.length + 1, node);
     }
+    /** Imports a module from the given file. */
     importModule(parent = null) {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.options.cache && module_1.Module.cache[this.filename]) {
@@ -788,26 +803,33 @@ class Template {
             return this.createModule(node, parent);
         });
     }
+    /** Creates a new module according to the given filename and node tree. */
     createModule(node, parent = null) {
         return __awaiter(this, void 0, void 0, function* () {
             let _module = new module_1.Module(this.filename);
             this.module = _module;
             yield this.attachBlockContents(node);
+            // If there is any layouts, push then to the very bottom of the 
+            // compiled code, and in the layout module, use variable `__contents` 
+            // to  attach the inner contents.
             if (this.layouts.length) {
                 for (let { filename, node } of this.layouts) {
                     this.importedModuleCount += 1;
                     let moduleId = "__module_" + this.importedModuleCount;
                     filename = filename.replace(/\\/g, "\\\\");
+                    // When dealing with layout, only import the `default` property,
+                    // and reassign the `default` in the current module.
                     this.pushCode(`const ${moduleId} = `, `require('${filename}', __locals, this.default)`, ";", node);
                     this.pushCode("this.default = ", `${moduleId}.default`, ";", node);
                 }
             }
             _module.parent = parent;
-            module_1.Module.cache[this.filename] = _module;
-            module_1.Module.sourceMaps[this.filename] = _module.sourceMap;
+            module_1.Module.cache[this.filename] = _module; // cache the module.
+            module_1.Module.sourceMaps[this.filename] = _module.sourceMap; // cache the source map.
             return _module;
         });
     }
+    /** Attaches block contents to the internal `code` object. */
     attachBlockContents(parent, indent = "") {
         return __awaiter(this, void 0, void 0, function* () {
             let cutSpace = NaN;
@@ -819,87 +841,98 @@ class Template {
                     this.pushCode(indent + "this.default += '", contents, "';", node);
                 }
                 else if (node.type == "var") {
-                    if (node.tag == "!") {
+                    if (node.tag == "!") { // !{statement}
                         this.pushCode(indent, node.contents, ";", node);
                     }
-                    else if (node.tag == "@") {
+                    else if (node.tag == "@") { // @{statement}
                         this.pushCode(indent + "this.default += ", node.contents, ";", node);
                     }
-                    else {
+                    else { // #{statement}
                         this.pushCode(indent + "this.default += __escape(", node.contents, ");", node);
                     }
                 }
-                else if (node.type == "snippet") {
+                else if (node.type == "snippet") { // <script engine="whatstpl"></script>
+                    // if (isNaN(cutSpace)) {
+                    //     let match = (<string>node.contents).match(/\S/);
+                    //     if (match)
+                    //         cutSpace = match.index;
+                    // }
                     let contents = cutSpace
                         ? node.contents.substring(cutSpace)
                         : node.contents;
                     this.pushCode(indent.substring(4), contents, "", node, false);
                 }
                 else if (node.type == "block") {
-                    if (node.tag == "import") {
+                    if (node.tag == "import") { // <import/>
                         yield this.attachImport(node, indent);
                     }
-                    else if (node.tag == "export") {
+                    else if (node.tag == "export") { // <export/>
                         yield this.attachExport(node, indent);
                     }
-                    else if (node.tag == "block") {
+                    else if (node.tag == "block") { // <block></block>
                         yield this.attackBlock(node, indent);
                     }
-                    else if (node.tag == "if") {
+                    else if (node.tag == "if") { // <if></if>
                         yield this.attachIf(node, indent);
                     }
-                    else if (node.tag == "else-if") {
+                    else if (node.tag == "else-if") { // <else-if></else-if>
                         yield this.attachElseIf(node, indent.substring(4));
                     }
-                    else if (node.tag == "else") {
+                    else if (node.tag == "else") { // <else></else>
                         yield this.attachElse(node, indent.substring(4));
                     }
-                    else if (node.tag == "switch") {
+                    else if (node.tag == "switch") { // <switch></switch>
                         yield this.attachSwitch(node, indent);
                     }
-                    else if (node.tag == "case") {
+                    else if (node.tag == "case") { // <case></case>
                         yield this.attachCase(node, indent);
                     }
-                    else if (node.tag == "default") {
+                    else if (node.tag == "default") { // <default></default>
                         yield this.attachDefault(node, indent);
                     }
-                    else if (node.tag == "for") {
+                    else if (node.tag == "for") { // <for></for>
                         yield this.attachFor(node, indent);
                     }
-                    else if (node.tag == "while") {
+                    else if (node.tag == "while") { // <while></while>
                         yield this.attachWhile(node, indent);
                     }
-                    else if (node.tag == "do") {
+                    else if (node.tag == "do") { // <do></do>
                         yield this.attachDoWhile(node, indent);
                     }
                     else if (node.tag == "continue" || node.tag == "break") {
+                        // <continue/> and <break/>
                         this.pushCode(indent, node.tag, ";", node);
                     }
-                    else if (node.tag == "layout") {
+                    else if (node.tag == "layout") { // <layout></layout>
                         yield this.attachLayout(node, indent);
                     }
-                    else if (node.tag == "script") {
+                    else if (node.tag == "script") { // <script></script>
                         let attrs = node.attributes;
                         let shouldCompile = !attrs.engine
                             || attrs.engine.value != whatstpl_toolkit_1.Parser.EngineName;
-                        if (shouldCompile) {
+                        if (shouldCompile) { // JavaScript of the HTML.
                             let contents = "<script";
+                            // attach attributes.
                             for (let name in attrs) {
                                 contents += ` ${name}="${attrs[name].value}"`;
                             }
                             contents += ">\\n";
                             this.pushCode(indent + "this.default += '", contents, "';", node);
                         }
+                        // Attaches the contents in the <script> element.
                         yield this.attachBlockContents(node, indent + "    ");
                         if (shouldCompile) {
                             this.pushCode(indent + "this.default += '", "</script>\\n", "';", node);
                         }
                     }
-                    else {
+                    else { // user-defined block tags.
                         let name = node.tag.replace(/-/g, "_"), attrs = node.attributes;
                         if (attrs.await && attrs.await.value != "false")
                             name = "await " + name;
                         let contents = "call(this";
+                        // User-defined block tags are treated as function, when 
+                        // called, the attribute `data` will be used as arguments
+                        // and passed to the function.
                         if (attrs.data && attrs.data.value)
                             contents += ", " + attrs.data.value;
                         contents += ")";
@@ -909,13 +942,18 @@ class Template {
             }
         });
     }
+    /** <layout file="<filename>"/> */
     attachLayout(node, indent = "") {
         return __awaiter(this, void 0, void 0, function* () {
             let filename = this.getAbsPath(node.attributes.file.value), tpl = new this.constructor(filename, this.options);
             yield tpl.importModule(this.module);
+            // The layouts are not attached immediately, they will be stored in 
+            // an array, when the current module is compiled, layouts will be 
+            // added to the very end of the compiled code.
             this.layouts.push({ filename, node });
         });
     }
+    /** <import[ target="<block-name>"] file|from="<filename>"/> */
     attachImport(node, indent = "") {
         return __awaiter(this, void 0, void 0, function* () {
             let attrs = node.attributes, filename = this.getAbsPath(attrs.from ? attrs.from.value : attrs.file.value), tpl = new this.constructor(filename, this.options);
@@ -924,44 +962,56 @@ class Template {
             let moduleId = "__module_" + this.importedModuleCount;
             filename = filename.replace(/\\/g, "\\\\");
             this.pushCode(`${indent}const ${moduleId} = `, `require('${filename}', __locals)`, ";", node);
+            // The 'target' attribute in a <import/> elements sets which names 
+            // should be imported.
             if (attrs.target && attrs.target.value) {
                 let tags = attrs.target.value.replace(/-/g, "_").split(/\s*,\s*/);
                 for (let tag of tags) {
+                    // parse as syntax.
                     let pair = tag.split(/\s*as\s*/), oldName = pair[0], newName = pair[1] || oldName;
                     this.pushCode(indent, `const ${newName} = ${moduleId}.${oldName}`, ";", node);
                 }
             }
-            else {
+            else { // If no 'target', then import the `default` property.
                 this.pushCode(indent, `this.default += ${moduleId}.default`, ";", node);
             }
         });
     }
+    /** <export target="<block-names>"/> */
     attachExport(node, indent = "") {
         return __awaiter(this, void 0, void 0, function* () {
+            // The 'target' attribute in a <export/> elements sets which names 
+            // should be exported and can be imported by other modules.
             if (node.attributes.target && node.attributes.target.value) {
                 let tags = node.attributes.target.value.split(/,\s*/);
                 for (let i in tags) {
+                    // parse `as` syntax
                     let pair = tags[i].split(/\s+as\s+/), oldName = pair[0].replace(/-/g, "_"), newName = pair[1] ? pair[1].replace(/-/g, "_") : oldName;
                     this.pushCode(indent, `this.${newName} = ${oldName}`, ";", node);
                 }
             }
         });
     }
+    /** <block name="<name>"[ export][ async][ params="<params>"]></block> */
     attackBlock(block, indent = "") {
         return __awaiter(this, void 0, void 0, function* () {
             let attrs = block.attributes, name = attrs.name.value.replace(/-/g, "_"), contents = `function ${name}(`;
+            // 'async' attribute means the function is an async function.
             if (attrs.async && attrs.async.value != "false")
                 contents = `async ` + contents;
+            // 'params' attribute sets function parameters.
             if (attrs.params && attrs.params.value)
                 contents += attrs.params.value;
             contents += ")";
             this.pushCode(indent, contents, " {", block);
             yield this.attachBlockContents(block, indent + "    ");
             this.pushCode(indent, "", "}", block);
+            // The block can be exported by setting an 'export' attribute.
             if (attrs.export && attrs.export.value != "false")
                 this.pushCode(indent, `this.${name} = ${name}`, ";", block);
         });
     }
+    /** <if condition="<condition>"></if> */
     attachIf(block, indent = "") {
         return __awaiter(this, void 0, void 0, function* () {
             this.pushCode(indent + "if (", block.attributes.condition.value, ") {", block);
@@ -969,18 +1019,21 @@ class Template {
             this.pushCode(indent, "", "}", block);
         });
     }
+    /** <else-if condition="<condition>"></else-if> */
     attachElseIf(block, indent = "") {
         return __awaiter(this, void 0, void 0, function* () {
             this.pushCode(indent + "} else if (", block.attributes.condition.value, ") {", block);
             yield this.attachBlockContents(block, indent + "    ");
         });
     }
+    /** <else></else> */
     attachElse(block, indent = "") {
         return __awaiter(this, void 0, void 0, function* () {
             this.pushCode(indent + "} else {", "", "", block);
             yield this.attachBlockContents(block, indent + "    ");
         });
     }
+    /** <switch target="<target>"></switch> */
     attachSwitch(block, indent = "") {
         return __awaiter(this, void 0, void 0, function* () {
             this.pushCode(indent + "switch (", block.attributes.target.value, ") {", block);
@@ -988,6 +1041,7 @@ class Template {
             this.pushCode(indent, "", "}", block);
         });
     }
+    /** <case data="<data>"></case> */
     attachCase(block, indent = "") {
         return __awaiter(this, void 0, void 0, function* () {
             this.pushCode(indent + "case ", block.attributes.data.value, ":", block);
@@ -995,6 +1049,7 @@ class Template {
             this.pushCode(indent + "    ", "break", ";", block);
         });
     }
+    /** <default></default> */
     attachDefault(block, indent = "") {
         return __awaiter(this, void 0, void 0, function* () {
             this.pushCode(indent + "default", "", ":", block);
@@ -1002,6 +1057,7 @@ class Template {
             this.pushCode(indent + "    ", "break", ";", block);
         });
     }
+    /** <for statement="<statement>"></for> */
     attachFor(block, indent = "") {
         return __awaiter(this, void 0, void 0, function* () {
             this.pushCode(indent + "for (", block.attributes.statement.value, ") {", block);
@@ -1009,6 +1065,7 @@ class Template {
             this.pushCode(indent, "", "}", block);
         });
     }
+    /** <while condition="<condition>"></while> */
     attachWhile(block, indent = "") {
         return __awaiter(this, void 0, void 0, function* () {
             this.pushCode(indent + "while (", block.attributes.condition.value, ") {", block);
@@ -1016,6 +1073,7 @@ class Template {
             this.pushCode(indent, "", "}", block);
         });
     }
+    /** <do while="<condition>"></do> */
     attachDoWhile(block, indent = "") {
         return __awaiter(this, void 0, void 0, function* () {
             this.pushCode(indent + "do ", "", " {", block);
@@ -1050,6 +1108,13 @@ class Module {
         this.dirname = whatstpl_toolkit_1.dirname(filename);
         this.code = "";
     }
+    /**
+     *
+     * @param id Module id, usually it's the module filename.
+     * @param locals Local variables passed to the module.
+     * @param contents Layout contents, used when the current module is a
+     *  layout module.
+     */
     require(id, locals = {}, contents = "") {
         let filename = whatstpl_toolkit_1.isAbsPath(id) || this.dirname == "."
             ? id
@@ -1076,6 +1141,11 @@ const Params = "require, __filename, __dirname, __contents, __locals, __escape";
 const EvalRE = /at ([a-zA-Z0-9_\.]+) \(eval at.+<anonymous>:(\d+:\d+)\)/;
 const RequireRE = /const __module_\d+ = require\('(.+?)'/;
 const FnCallRE = /([a-zA-Z0-9_]+).call\(this.*\)/;
+// The `new Function()` will generate a function which it's string 
+// representation is different in different JavaScript engines, so here I 
+// calculate out the function body offset from a test function, so that when 
+// replacing the error, the program can calculate the accurate position of the
+// function body.
 const FnBodyOffset = whatstpl_toolkit_1.getFunctionBodyOffset(new Function("a, b", "a + b"));
 function createFunction(filename, code, locals) {
     let props = Object.keys(locals).join(", ");
@@ -1083,7 +1153,7 @@ function createFunction(filename, code, locals) {
         return new Function(Params + (props ? ", " + props : ""), code);
     }
     catch (err) {
-        if (err instanceof SyntaxError) {
+        if (err instanceof SyntaxError) { // replace the error stack.
             err.message = "Unexpected token found";
             let stacks = err.stack.split("\n");
             stacks[1] = stacks[1].replace("<anonymous>", filename);
@@ -1095,10 +1165,12 @@ function createFunction(filename, code, locals) {
         }
     }
 }
+/** Gets the function name from a line of code. */
 function getFuncName(lineCode) {
     let matches = lineCode.match(FnCallRE);
     return matches ? matches[1] : "";
 }
+/** Gets the imported filename from a `require()` statement. */
 function getImportFilename(code, line) {
     let codeArr = code.split("\n"), funcName = getFuncName(codeArr[line - 1]), lineCode, matches;
     if (funcName) {
@@ -1125,33 +1197,52 @@ function getImportFilename(code, line) {
         }
     }
     else {
+        // line number starts from 1, while array index starts from 0, so here 
+        // must decrease 1.
         lineCode = codeArr[line - 1];
         matches = lineCode && lineCode.match(RequireRE);
         return matches ? matches[1].replace(/\\\\/g, "\\") : "";
     }
 }
+/**
+ * Replaces error stack according to the source map.
+ * @param filename The main module filename.
+ */
 function replaceError(err, filename) {
     let stacks = err.stack.split("\n").reverse();
     for (let i in stacks) {
+        // first line the the stack or failed to parse the filename.
         if (stacks[i][0] != " " || !filename)
             continue;
         let matches = stacks[i].match(EvalRE);
         if (matches) {
-            let funcName = matches[1], pair = matches[2].split(":"), line = parseInt(pair[0]), column = parseInt(pair[1]), source = {
+            let funcName = matches[1], pair = matches[2].split(":"), line = parseInt(pair[0]), column = parseInt(pair[1]), 
+            // The running code will be wrapped in a function which the 
+            // definition takes at least one line, so here the line number 
+            // should decrease according to the function body offset.
+            source = {
                 funcName,
                 filename,
                 line: line - FnBodyOffset.line,
                 column
-            }, map = Module.sourceMaps[filename][source.line], code = Module.cache[filename].code;
+            }, 
+            /** The source map of one line of code. */
+            map = Module.sourceMaps[filename][source.line], code = Module.cache[filename].code;
+            // If the source line is 1 (the first line), then the column 
+            // should be calculated as well.
             if (source.line == 1)
                 source.column = column - FnBodyOffset.column;
+            // recalculate the filename, move to the next import file.
             filename = getImportFilename(code, source.line);
+            // Replace the line number to the line number in the source file.
             source.line = map.node.line;
+            // Calculate and replace the column number.
             source.column = (column - map.column) + map.node.column;
             stacks[i] = `    at ${source.funcName} (${source.filename}`
                 + `:${source.line}:${source.column})`;
         }
     }
+    // Regenerate the error stack.
     stacks.reverse();
     err.stack = stacks.join("\n");
     return err;

@@ -9,7 +9,9 @@
         "experimentalDecorators": true,
         "sourceMap": true,
         "pretty": true,
-        "removeComments": true,
+        // "removeComments": true,
+        "declaration": true,
+        "declarationDir": "./",
         "lib": [
             "es2015",
             "es2016.array.include",

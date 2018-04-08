@@ -1,9 +1,9 @@
 {
   "name": "whatstpl",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A template processing language extends HTML.",
   "main": "dist/whatstpl.js",
-  "types": "src/index.ts",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "@echo please go to 'test/' directory and test the files one by one."
   },
