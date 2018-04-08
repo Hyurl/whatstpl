@@ -7,7 +7,7 @@
 WhatsTPL is an HTML preprocessing engine, this package is a JavaScript 
 implementation of it.
 
-## What's it looks like of WhatsTPL?
+## What does it look like of WhatsTPL?
 
 WhatsTPL extends the native HTML, it doesn't change the way of how people 
 writing HTML documents, but base on HTML, WhatsTPL adds more meaningful tags 
