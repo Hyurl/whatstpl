@@ -10,7 +10,7 @@
         "sourceMap": true,
         "pretty": true,
         // "removeComments": true,
-        "declaration": true,
+        // "declaration": true,
         "declarationDir": "./",
         "lib": [
             "es2015",
