@@ -196,6 +196,10 @@ whatstpl.Template.renderFile("index.html", locals).then(html => {
 - `Template.compileFile(filename: string, encoding?: string): Promise<Renderer>`
 - `Template.compileFile(filename: string, options: CompileOption): Promise<Renderer>`
     编译指定文件的静态版本方法。
+- `Template.register(filename: string, tpl: string): Promise<Renderer>` 
+    将给定的模板字符串注册为一个模板实例，并且设置一个临时的文件名以供导入用途。这个
+    函数通常用在浏览器中，虽然 WhatsTPL 允许你引入远程模板，但下载那些文件将会消耗
+    一些时间，因此将一些通用的组件注册在程序中能够起到一些帮助。
 
 ### Example
 

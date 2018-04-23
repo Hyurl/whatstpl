@@ -210,6 +210,12 @@ This package only contains one class, the `Template`.
 - `Template.compileFile(filename: string, encoding?: string): Promise<Renderer>`
 - `Template.compileFile(filename: string, options: CompileOption): Promise<Renderer>`
     Static version to compile a given file.
+- `Template.register(filename: string, tpl: string): Promise<Renderer>` 
+    Registers the given template string as a template, and set a temporary 
+    filename for importing usage. This function usually used in browser, 
+    though WhatsTPL allows you import remote templates via Ajax, but it will 
+    take time to download those files, so register some common components in 
+    the program can help.
 
 ### Example
 

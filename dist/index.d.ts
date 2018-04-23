@@ -9,13 +9,25 @@ export interface CompileOption {
     encoding?: string;
     /** Whether the compiled function should be cached in memory. */
     cache?: boolean;
-    /** Whether or not to remove the comments when ernder HTML. */
+    /** Whether or not to remove the comments when render HTML. */
     removeComments?: boolean;
     /**
-     * Used when the program is run in a browser and load remote template via
-     * Ajax.
+     * Request timeout, used when the program is run in a browser and load
+     * remote template via Ajax.
      */
     timeout?: number;
+    /**
+     * Whether or not to send credentials (e.g. cookies) when request, used
+     * when the program is run in a browser and load remote template via Ajax.
+     */
+    withCredentials?: boolean;
+    /**
+     * Request headers, used when the program is run in a browser and load
+     * remote template via Ajax.
+     */
+    headers?: {
+        [name: string]: string | number | boolean | string[];
+    };
 }
 export declare const CompileOption: CompileOption;
 export declare class Template {
@@ -40,6 +52,11 @@ export declare class Template {
     /** Compiles the given file. */
     static compileFile(filename: string, encoding?: string): Promise<Renderer>;
     static compileFile(filename: string, options?: CompileOption): Promise<Renderer>;
+    /**
+     * Registers the given template string as a template, and set a temporary
+     * filename for importing usage.
+     */
+    static register(filename: string, tpl: string): Promise<Renderer>;
     /** Loads the template contents from the file. */
     protected loadTemplate(): Promise<string>;
     /** Gets the absolute path of the filename, if it is relative.  */

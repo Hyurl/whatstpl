@@ -223,7 +223,7 @@ class Parser {
         }
         return { lineStr, left, line };
     }
-    attachTextNode(lineStr, line, column, endIndex, nodes) {
+    attachTextNode(lineStr, line, column, endIndex, nodes, keepPureSpaces = false) {
         let textNode = {
             type: "text",
             line,
@@ -231,7 +231,7 @@ class Parser {
             contents: endIndex ? lineStr.substring(0, endIndex) : lineStr + "\n",
             closed: true,
         };
-        if (textNode.contents.trimLeft()) {
+        if (keepPureSpaces || textNode.contents.trimLeft()) {
             nodes.push(textNode);
             this.emit("text", textNode);
         }
@@ -307,7 +307,7 @@ class Parser {
         }
         else if (matches[3] && matches[4]) {
             if (matches.index) {
-                this.attachTextNode(lineStr, line, column, matches.index, nodes);
+                this.attachTextNode(lineStr, line, column, matches.index, nodes, matches[3] != "!");
                 column += matches.index;
             }
             column += 2;
@@ -435,6 +435,7 @@ class Parser {
         let ending;
         let blockClosed;
         let left;
+        let leftIndex = 0;
         if (matches[1]) {
             let pos = matches.index + matches[0].length, quote = lineStr[pos], end;
             noQuote = quote != "'" && quote != '"';
@@ -462,9 +463,11 @@ class Parser {
         blockClosed = ending == "/";
         attrs[name] = { name, value, line, column };
         if (ending == "/")
-            left = left.substring(2);
+            leftIndex = left.indexOf("/>") + 2;
         else if (ending == ">")
-            left = left.substring(1);
+            leftIndex = left.indexOf(">") + 1;
+        if (leftIndex)
+            left = left.substring(leftIndex);
         if (left) {
             html = left + "\n" + html;
             column += (matches[1] ? value.length : matches[0].length)
@@ -478,12 +481,8 @@ class Parser {
             return this.applyAttr(html, line, column, attrs);
         }
         else {
-            let i;
-            if (ending == ">")
-                i = left.indexOf(">") + 1;
-            else if (ending == "/")
-                i = left.indexOf("/>") + 2;
-            column += i;
+            if (left)
+                column += leftIndex;
             return { line, column, left: html, blockClosed };
         }
     }
@@ -680,7 +679,9 @@ exports.CompileOption = {
     encoding: "utf8",
     cache: false,
     removeComments: false,
-    timeout: 5000
+    timeout: 5000,
+    withCredentials: false,
+    headers: null
 };
 class Template {
     constructor(filename = "", options = "utf8") {
@@ -721,7 +722,7 @@ class Template {
             // `default` property (HTML) from the module.
             let render = (locals = {}) => {
                 try {
-                    return _module.require(this.filename, locals).default;
+                    return _module.require(this.filename, locals).default.trimRight();
                 }
                 catch (err) { // replace and re-throw the error.
                     throw module_1.replaceError(err, this.filename);
@@ -743,6 +744,16 @@ class Template {
             return tpl.compile(html);
         });
     }
+    /**
+     * Registers the given template string as a template, and set a temporary
+     * filename for importing usage.
+     */
+    static register(filename, tpl) {
+        let tplObj = new this(filename, {
+            cache: true
+        });
+        return tplObj.compile(tpl);
+    }
     /** Loads the template contents from the file. */
     loadTemplate() {
         if (!whatstpl_toolkit_1.IsBrowser) {
@@ -756,7 +767,23 @@ class Template {
             return new Promise((resolve, reject) => {
                 let xhr = new XMLHttpRequest();
                 xhr.timeout = this.options.timeout;
+                xhr.withCredentials = this.options.withCredentials;
                 xhr.open("GET", this.filename, true);
+                if (this.options.headers) {
+                    for (let name in this.options.headers) {
+                        let value = this.options.headers[name];
+                        if (Array.isArray(value)) {
+                            value = value.join(", ");
+                        }
+                        else if (typeof value != "string") {
+                            if (typeof value.toString == "function")
+                                value = value.toString();
+                            else
+                                value = String(value);
+                        }
+                        xhr.setRequestHeader(name, value);
+                    }
+                }
                 xhr.onload = () => {
                     resolve(xhr.responseText);
                 };
@@ -796,7 +823,7 @@ class Template {
     /** Imports a module from the given file. */
     importModule(parent = null) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (this.options.cache && module_1.Module.cache[this.filename]) {
+            if (module_1.Module.cache[this.filename]) {
                 return module_1.Module.cache[this.filename];
             }
             let tpl = yield this.loadTemplate(), parser = new whatstpl_toolkit_1.Parser(this.filename), node = parser.parse(tpl);

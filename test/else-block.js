@@ -1,16 +1,27 @@
+const assert = require("assert");
 const { Template } = require("../");
 
-var tpl = new Template().render(`
-<if condition="typeof abc == 'number'">
-    '@{abc}' is a number.
-    <else>
-        '@{abc}' is not a number.
-    </else>
-</if>
-`, {
+var tpl = [
+    `<if condition="typeof abc == 'number'">`,
+    `    '@{abc}' is a number.`,
+    `    <else>`,
+    `        '@{abc}' is not a number.`,
+    `    </else>`,
+    '</if>'
+].join("\n");
+
+var locals = {
     abc: "<p>Hello, World!</p>"
-}).then(html => {
-    console.log(html);
-}).catch(err => {
-    console.log(err);
+};
+
+var html = [
+    `        '<p>Hello, World!</p>' is not a number.`
+].join("\n");
+
+describe("Handle <else></else> block", () => {
+    it("should render HTML as expected", (done) => {
+        new Template().render(tpl, locals).then(result => {
+            assert.equal(result, html);
+        }).then(done).catch(done);
+    });
 });

@@ -29,20 +29,32 @@ export interface CompileOption {
     encoding?: string;
     /** Whether the compiled function should be cached in memory. */
     cache?: boolean;
-    /** Whether or not to remove the comments when ernder HTML. */
+    /** Whether or not to remove the comments when render HTML. */
     removeComments?: boolean;
     /**
-     * Used when the program is run in a browser and load remote template via 
-     * Ajax.
+     * Request timeout, used when the program is run in a browser and load 
+     * remote template via Ajax.
      */
     timeout?: number;
+    /**
+     * Whether or not to send credentials (e.g. cookies) when request, used 
+     * when the program is run in a browser and load remote template via Ajax.
+     */
+    withCredentials?: boolean;
+    /**
+     * Request headers, used when the program is run in a browser and load 
+     * remote template via Ajax.
+     */
+    headers?: { [name: string]: string | number | boolean | string[] };
 }
 
 export const CompileOption: CompileOption = {
     encoding: "utf8",
     cache: false,
     removeComments: false,
-    timeout: 5000
+    timeout: 5000,
+    withCredentials: false,
+    headers: null
 }
 
 export class Template {
@@ -100,7 +112,7 @@ export class Template {
         // `default` property (HTML) from the module.
         let render: Renderer = (locals = {}) => {
             try {
-                return _module.require(this.filename, locals).default;
+                return _module.require(this.filename, locals).default.trimRight();
             } catch (err) { // replace and re-throw the error.
                 throw replaceError(err, this.filename);
             }
@@ -129,6 +141,18 @@ export class Template {
         return tpl.compile(html);
     }
 
+    /**
+     * Registers the given template string as a template, and set a temporary
+     * filename for importing usage.
+     */
+    static register(filename: string, tpl: string): Promise<Renderer> {
+        let tplObj = new this(filename, {
+            cache: true
+        });
+
+        return tplObj.compile(tpl);
+    }
+
     /** Loads the template contents from the file. */
     protected loadTemplate(): Promise<string> {
         if (!IsBrowser) {
@@ -141,13 +165,34 @@ export class Template {
             return new Promise((resolve, reject) => {
                 let xhr = new XMLHttpRequest();
                 xhr.timeout = this.options.timeout;
+                xhr.withCredentials = this.options.withCredentials;
                 xhr.open("GET", this.filename, true);
+
+                if (this.options.headers) {
+                    for (let name in this.options.headers) {
+                        let value: any = this.options.headers[name];
+
+                        if (Array.isArray(value)) {
+                            value = value.join(", ");
+                        } else if (typeof value != "string") {
+                            if (typeof value.toString == "function")
+                                value = value.toString();
+                            else
+                                value = String(value);
+                        }
+
+                        xhr.setRequestHeader(name, value);
+                    }
+                }
+
                 xhr.onload = () => {
                     resolve(xhr.responseText);
                 };
+
                 xhr.onabort = xhr.onerror = xhr.ontimeout = () => {
                     reject(new Error("failed to load remote module."));
                 };
+
                 xhr.send();
             });
         }
@@ -187,7 +232,7 @@ export class Template {
 
     /** Imports a module from the given file. */
     protected async importModule(parent: Module = null): Promise<Module> {
-        if (this.options.cache && Module.cache[this.filename]) {
+        if (Module.cache[this.filename]) {
             return Module.cache[this.filename];
         }
 
