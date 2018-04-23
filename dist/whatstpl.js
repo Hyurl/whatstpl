@@ -336,7 +336,7 @@ class Parser {
                 this.attachTextNode(lineStr, line, column, matches.index, nodes);
                 column += matches.index;
             }
-            let endColumn = matches.index + matches[0].length, ending = lineStr[endColumn - 1], blockNode = {
+            let endColumn = matches.index + matches[0].length, ending = lineStr[endColumn - 1], tagClosed = ending == "/" || ending == ">", blockNode = {
                 tag: matches[5],
                 type: "block",
                 line,
@@ -345,7 +345,7 @@ class Parser {
                 contents: [],
                 closed: false,
             };
-            if (ending == "/" || ending == ">")
+            if (tagClosed)
                 endColumn -= 1;
             let left = lineStr.substring(endColumn);
             if (!left && html) {
@@ -359,6 +359,8 @@ class Parser {
             if (left) {
                 html = left + (html ? "\n" + html : "");
                 column += matches[0].length;
+                if (tagClosed)
+                    column -= 1;
             }
             else {
                 throw new errors_1.UnclosedTagError("unclosed tag", this.filename, line, column);
@@ -403,7 +405,7 @@ class Parser {
         }
     }
     applyAttr(html, line, column, attrs) {
-        let LineInfo = this.getLine(html, line), lineStr = LineInfo.lineStr, matches = lineStr.match(AttrRe);
+        let LineInfo = this.getLine(html, line), lineStr = LineInfo.lineStr, leading = lineStr.trimLeft()[0], tagClosed = leading == "/" || leading == ">", matches = tagClosed ? null : lineStr.match(AttrRe);
         line = LineInfo.line;
         html = LineInfo.left;
         if (!matches) {
@@ -426,22 +428,19 @@ class Parser {
                 line,
                 column,
                 left: html,
-                blockClosed: lineStr[i - 1] == "/"
+                blockClosed: leading == "/"
             };
         }
         let name;
         let value;
-        let noQuote = true;
-        let ending;
-        let blockClosed;
+        let quoted = true;
         let left;
-        let leftIndex = 0;
         if (matches[1]) {
             let pos = matches.index + matches[0].length, quote = lineStr[pos], end;
-            noQuote = quote != "'" && quote != '"';
-            if (!noQuote)
+            quoted = quote == "'" || quote == '"';
+            if (quoted)
                 pos += 1;
-            if (!noQuote) {
+            if (quoted) {
                 end = lineStr.indexOf(quote, pos);
             }
             else {
@@ -459,32 +458,17 @@ class Parser {
             left = lineStr.substring(matches.index + matches[0].length);
             column += matches.index;
         }
-        ending = left ? left.trimLeft()[0] : "";
-        blockClosed = ending == "/";
         attrs[name] = { name, value, line, column };
-        if (ending == "/")
-            leftIndex = left.indexOf("/>") + 2;
-        else if (ending == ">")
-            leftIndex = left.indexOf(">") + 1;
-        if (leftIndex)
-            left = left.substring(leftIndex);
         if (left) {
             html = left + "\n" + html;
-            column += (matches[1] ? value.length : matches[0].length)
-                + (noQuote ? 0 : 1);
+            column += (matches[1] ? value.length : matches[0].length);
+            column += (quoted ? 1 : 0);
         }
         else {
             line += 1;
             column = 1;
         }
-        if (!ending || (ending != ">" && ending != "/")) {
-            return this.applyAttr(html, line, column, attrs);
-        }
-        else {
-            if (left)
-                column += leftIndex;
-            return { line, column, left: html, blockClosed };
-        }
+        return this.applyAttr(html, line, column, attrs);
     }
     parseComment(html, line, column, commentNode) {
         let LineInfo = this.getLine(html, line), lineStr = LineInfo.lineStr, matches = lineStr && lineStr.match(/-->/);

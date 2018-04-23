@@ -32,6 +32,6 @@
     "webpack-cli": "^2.0.14"
   },
   "dependencies": {
-    "whatstpl-toolkit": "^0.1.7"
+    "whatstpl-toolkit": "^0.1.8"
   }
 }
