@@ -1,6 +1,6 @@
 {
   "name": "whatstpl",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "A template processing language extends HTML.",
   "main": "dist/whatstpl.js",
   "types": "index.d.ts",
