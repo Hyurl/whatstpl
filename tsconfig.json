@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "module": "commonjs",
-        "target": "es2015",
+        "target": "es5",
         "preserveConstEnums": true,
         "rootDir": "src",
         "outDir": "dist",
@@ -9,9 +9,11 @@
         "experimentalDecorators": true,
         "sourceMap": true,
         "pretty": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
         "lib": [
-            "es2015",
-            "es2016.array.include",
+            "es5",
+            "es2015.promise",
             "dom"
         ]
     },

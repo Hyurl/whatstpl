@@ -1,8 +1,8 @@
-const assert = require("assert");
-const { Template } = require("../");
+var assert = require("assert");
+var Template = require("../").Template;
 
 var tpl = [
-    `!{let i = 0}`,
+    `!{var i = 0}`,
     `<while condition="i < arr.length">`,
     `    <p>@{ arr[i] }</p>`,
     `    !{ i++ }`,
@@ -18,9 +18,9 @@ var html = [
     `    <p>Hi, WhatsTPL!</p>`
 ].join("\n");
 
-describe('Handle <while condition="<condition>"></while> block', () => {
-    it("should render HTML as expected", (done) => {
-        new Template().render(tpl, locals).then(result => {
+describe('Handle <while condition="<condition>"></while> block', function () {
+    it("should render HTML as expected", function (done) {
+        new Template().render(tpl, locals).then(function (result) {
             assert.equal(result, html);
         }).then(done).catch(done);
     });

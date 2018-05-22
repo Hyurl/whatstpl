@@ -1,8 +1,8 @@
-const assert = require("assert");
-const { Template } = require("../");
+var assert = require("assert");
+var Template = require("../").Template;
 
 var tpl = [
-    '<for statement="let i in arr">',
+    '<for statement="var i in arr">',
     '    <if condition="i == 5">',
     '        <break/>',
     '    </if>',
@@ -22,9 +22,9 @@ var html = [
     '    <p>5</p>',
 ].join("\n");
 
-describe("Handle <break> tag", () => {
-    it("should render HTML as expected", (done) => {
-        new Template().render(tpl, locals).then(result => {
+describe("Handle <break> tag", function () {
+    it("should render HTML as expected", function (done) {
+        new Template().render(tpl, locals).then(function (result) {
             assert.equal(result, html);
         }).then(done).catch(done);
     });

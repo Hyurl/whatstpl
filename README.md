@@ -156,8 +156,8 @@ WhatsTPL uses source map internally, so when any error occurs, it should provide
 
 ## Environment supports
 
-WhatsTPL can be run both in NodeJS and browsers, when in browsers, imported 
-files are auto-downloaded via Ajax.
+WhatsTPL can be run both in NodeJS (recommended 4.0.0 or higher) and browsers, 
+when in browsers, imported files are auto-downloaded via Ajax.
 
 In NodeJS, import WhatsTPL as the following:
 

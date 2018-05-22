@@ -1,5 +1,5 @@
-const assert = require("assert");
-const { Template } = require("../");
+var assert = require("assert");
+var Template = require("../").Template;
 
 var tpl = [
     `<import target="my-block" from="./my-block"/>`,
@@ -15,9 +15,9 @@ var html = [
     `        <p>Hi, WhatsTPL!</p>`
 ].join("\n");
 
-describe('Handle <import target="<block-name>" from="<filename>"/> tag', () => {
-    it("should render HTML as expected", (done) => {
-        new Template(__dirname + "/test.html").render(tpl, locals).then(result => {
+describe('Handle <import target="<block-name>" from="<filename>"/> tag', function () {
+    it("should render HTML as expected", function (done) {
+        new Template(__dirname + "/test.html").render(tpl, locals).then(function (result) {
             assert.equal(result, html);
         }).then(done).catch(done);
     });

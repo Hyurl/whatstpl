@@ -1,6 +1,6 @@
 <block export name="my-block" params="arr">
-    <for statement="let item of arr">
-        <p>@{item}</p>
+    <for statement="var i in arr">
+        <p>@{arr[i]}</p>
     </for>
 </block>
 

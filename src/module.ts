@@ -99,13 +99,12 @@ function createFunction(filename: string, code: string, locals: {
         return new Function(Params + (props ? ", " + props : ""), code);
     } catch (err) {
         if (err instanceof SyntaxError) { // replace the error stack.
-            err.message = "Unexpected token found";
-            
-            let stacks = err.stack.split("\n");
+            if (filename && filename !== "undefined") {
+                let stacks = err.stack.split("\n");
+                stacks[1] = stacks[1].replace(/<anonymous>|Function \(native\)/, filename);
+                err.stack = stacks.join("\n");
+            }
 
-            stacks[1] = stacks[1].replace("<anonymous>", filename);
-            err.stack = stacks.join("\n");
-            
             throw err;
         } else {
             throw replaceError(err, filename);

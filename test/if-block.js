@@ -1,5 +1,5 @@
-const assert = require("assert");
-const { Template } = require("../");
+var assert = require("assert");
+var Template = require("../").Template;
 
 var tpl = [
     `<if condition="typeof abc == 'string'">`,
@@ -15,9 +15,9 @@ var html = [
     `    <p>Hello, World!</p>`
 ].join("\n");
 
-describe('Handle <if condition="<condition>"></if> block', () => {
-    it("should render HTML as expected", (done) => {
-        new Template().render(tpl, locals).then(result => {
+describe('Handle <if condition="<condition>"></if> block', function () {
+    it("should render HTML as expected", function (done) {
+        new Template().render(tpl, locals).then(function (result) {
             assert.equal(result, html);
         }).then(done).catch(done);
     });

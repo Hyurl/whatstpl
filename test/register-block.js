@@ -1,10 +1,10 @@
-const assert = require("assert");
-const { Template, Module } = require("../");
+var assert = require("assert");
+var Template = require("../").Template;
 
 Template.register(__dirname + "/~whatstpl1.html", `
 <block name="my-block" params="arr" export>
-    <for statement="let item of arr">
-        <p>@{item}</p>
+    <for statement="var i in arr">
+        <p>@{arr[i]}</p>
     </for>
 </block>
 `);
@@ -23,9 +23,9 @@ var html = [
     `        <p>Hi, WhatsTPL!</p>`
 ].join("\n");
 
-describe('Handle Template.register()', () => {
-    it("should register template and render HTML as expected", (done) => {
-        new Template(__dirname + "/test.html").render(tpl, locals).then(result => {
+describe('Handle Template.register()', function () {
+    it("should register template and render HTML as expected", function (done) {
+        new Template(__dirname + "/test.html").render(tpl, locals).then(function (result) {
             assert.equal(result, html);
         }).then(done).catch(done);
     });

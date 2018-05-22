@@ -1,9 +1,9 @@
-const assert = require("assert");
-const { Template } = require("../");
+var assert = require("assert");
+var Template = require("../").Template;
 
 var tpl = [
-    `<for statement="let item of arr">`,
-    `    <p>@{item}</p>`,
+    `<for statement="var i in arr">`,
+    `    <p>@{arr[i]}</p>`,
     `</for>`
 ].join("\n");
 
@@ -16,9 +16,9 @@ var html = [
     `    <p>Hi, WhatsTPL!</p>`
 ].join("\n");
 
-describe('Handle <for statement="<statement>"></for> block', () => {
-    it("should render HTML as expected", (done) => {
-        new Template().render(tpl, locals).then(result => {
+describe('Handle <for statement="<statement>"></for> block', function () {
+    it("should render HTML as expected", function (done) {
+        new Template().render(tpl, locals).then(function (result) {
             assert.equal(result, html);
         }).then(done).catch(done);
     });

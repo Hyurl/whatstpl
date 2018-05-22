@@ -146,8 +146,8 @@ WhatsTPL 在内部使用了 Source Map，因此当任何错误发生时，它将
 
 ## 环境支持
 
-WhatsTPL 同时可以被运行在 NodeJS 和浏览器上，当在浏览器中，导入的模板将会通过 Ajax 
-被自动下载。
+WhatsTPL 同时可以被运行在 NodeJS (建议 4.0.0 或更高版本) 和浏览器上，当在浏览器中，
+导入的模板将会通过 Ajax 被自动下载。
 
 在 NodeJS 中，像下面这样导入 WhatsTPL：
 

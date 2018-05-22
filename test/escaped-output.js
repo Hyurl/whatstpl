@@ -1,5 +1,5 @@
-const assert = require("assert");
-const { Template } = require("../");
+var assert = require("assert");
+var Template = require("../").Template;
 
 var tpl = "#{abc}";
 var locals = {
@@ -7,9 +7,9 @@ var locals = {
 };
 var html = "Hello, World!";
 
-describe("Handle escaped output", () => {
-    it("should render HTML as expected", (done) => {
-        new Template().render(tpl, locals).then(result => {
+describe("Handle escaped output", function () {
+    it("should render HTML as expected", function (done) {
+        new Template().render(tpl, locals).then(function (result) {
             assert.equal(result, html);
         }).then(done).catch(done);
     });

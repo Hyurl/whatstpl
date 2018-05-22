@@ -1,5 +1,5 @@
-const assert = require("assert");
-const { Template } = require("../");
+var assert = require("assert");
+var Template = require("../").Template;
 
 var tpl = [
     `<if condition="typeof abc == 'number'">`,
@@ -18,9 +18,9 @@ var html = [
     `        '<p>Hello, World!</p>' is not a number.`
 ].join("\n");
 
-describe("Handle <else></else> block", () => {
-    it("should render HTML as expected", (done) => {
-        new Template().render(tpl, locals).then(result => {
+describe("Handle <else></else> block", function () {
+    it("should render HTML as expected", function (done) {
+        new Template().render(tpl, locals).then(function (result) {
             assert.equal(result, html);
         }).then(done).catch(done);
     });

@@ -1,7 +1,6 @@
 import {
     Node,
     Parser,
-    escape,
     isAbsPath,
     extname,
     dirname,
@@ -11,6 +10,7 @@ import {
     Separator,
     IsBrowser
 } from "whatstpl-toolkit";
+import assign = require("object-assign");
 import { Module, replaceError } from "./module";
 
 var fs: {
@@ -79,7 +79,7 @@ export class Template {
         if (typeof options == "string")
             options = { encoding: options };
 
-        this.options = Object.assign({}, CompileOption, options);
+        this.options = assign({}, CompileOption, options);
     }
 
     /** Renders the given template contents. */
@@ -356,7 +356,7 @@ export class Template {
                     // <continue/> and <break/>
                     this.pushCode(indent, node.tag, ";", node);
                 } else if (node.tag == "layout") { // <layout></layout>
-                    await this.attachLayout(node, indent);
+                    await this.attachLayout(node);
                 } else if (node.tag == "script") { // <script></script>
                     let attrs = node.attributes;
                     let shouldCompile = !attrs.engine
@@ -414,7 +414,7 @@ export class Template {
     }
 
     /** <layout file="<filename>"/> */
-    private async attachLayout(node: Node, indent = "") {
+    private async attachLayout(node: Node) {
         let filename = this.getAbsPath(node.attributes.file.value),
             tpl: Template = new (<any>this.constructor)(filename, this.options);
 
